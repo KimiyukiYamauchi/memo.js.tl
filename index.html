@@ -1,26 +1,180 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
-  <head>
-    <title>簡単メモアプリ</title>
-    <meta charset="UTF-8" />
-    <link rel="stylesheet" href="src/styles.css" />
-  </head>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>シンプルメモ</title>
+  <style>
+    :root{font-family:system-ui,-apple-system,'Segoe UI',Roboto,'Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif}
+    body{max-width:900px;margin:30px auto;padding:20px}
+    h1{margin:0 0 16px}
+    .controls{display:flex;gap:8px;margin-bottom:12px}
+    textarea{width:100%;min-height:80px;padding:10px;resize:vertical}
+    button{padding:8px 12px;border-radius:6px;border:1px solid #ccc;background:#f5f5f5;cursor:pointer}
+    ul{list-style:none;padding:0;margin:16px 0}
+    li{display:flex;align-items:flex-start;gap:12px;padding:10px;border:1px solid #eee;border-radius:8px;margin-bottom:8px}
+    .note-body{flex:1;white-space:pre-wrap}
+    .meta{font-size:12px;color:#666}
+    .actions{display:flex;flex-direction:column;gap:6px}
+    .small{font-size:12px;padding:6px 8px}
+    .search{margin:8px 0}
+    .empty{color:#999;text-align:center;padding:20px}
+  </style>
+</head>
+<body>
+  <h1>シンプルメモ</h1>
 
-  <body>
-    <h1 id="title">簡単メモアプリ</h1>
-    <input id="add-text" />
-    <button id="add-button">追加</button>
-    <div class="container">
-      <p>メモ一覧</p>
-      <ul id="memo-list">
-        <li>
-          <div>
-            <p>本を読む</p>
-            <button>削除</button>
-          </div>
-        </li>
-      </ul>
+  <div>
+    <label for="note">新しいメモ</label>
+    <textarea id="note" placeholder="ここにメモを書いてください..."></textarea>
+    <div class="controls">
+      <button id="add">追加</button>
+      <button id="clearAll">全て削除</button>
+      <input id="title" placeholder="メモのタイトル（任意）" />
     </div>
-    <script src="src/index.js"></script>
-  </body>
+
+    <div class="search">
+      <input id="filter" placeholder="検索（タイトル / 本文）" />
+    </div>
+  </div>
+
+  <ul id="list" aria-live="polite"></ul>
+  <div id="empty" class="empty">メモはまだありません。上のフォームで追加できます。</div>
+
+  <script>
+    // 簡単なメモアプリ（ローカルストレージで永続化）
+    const KEY = 'simple-memo-v1';
+    const noteEl = document.getElementById('note');
+    const titleEl = document.getElementById('title');
+    const addBtn = document.getElementById('add');
+    const listEl = document.getElementById('list');
+    const clearAllBtn = document.getElementById('clearAll');
+    const filterEl = document.getElementById('filter');
+    const emptyEl = document.getElementById('empty');
+
+    let notes = load();
+    render();
+
+    addBtn.addEventListener('click', () => {
+      const text = noteEl.value.trim();
+      const title = titleEl.value.trim();
+      if (!text) {
+        alert('メモが空です。何か書いてください。');
+        return;
+      }
+      const item = {
+        id: Date.now().toString(),
+        title: title || null,
+        text,
+        createdAt: new Date().toISOString()
+      };
+      notes.unshift(item); // 新しいメモを先頭に
+      save();
+      render();
+      noteEl.value = '';
+      titleEl.value = '';
+      noteEl.focus();
+    });
+
+    clearAllBtn.addEventListener('click', () => {
+      if (!notes.length) return;
+      if (confirm('本当にすべてのメモを削除しますか？')) {
+        notes = [];
+        save();
+        render();
+      }
+    });
+
+    filterEl.addEventListener('input', () => render());
+
+    function render() {
+      const q = (filterEl.value || '').toLowerCase();
+      listEl.innerHTML = '';
+      const filtered = notes.filter(n => {
+        if (!q) return true;
+        return (n.title && n.title.toLowerCase().includes(q)) || n.text.toLowerCase().includes(q);
+      });
+
+      if (!filtered.length) {
+        emptyEl.style.display = 'block';
+      } else {
+        emptyEl.style.display = 'none';
+      }
+
+      for (const n of filtered) {
+        const li = document.createElement('li');
+
+        const body = document.createElement('div');
+        body.className = 'note-body';
+
+        const title = document.createElement('div');
+        title.className = 'meta';
+        title.textContent = n.title || '(タイトルなし)';
+
+        const text = document.createElement('div');
+        text.textContent = n.text;
+
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+        const d = new Date(n.createdAt);
+        meta.textContent = d.toLocaleString();
+
+        const actions = document.createElement('div');
+        actions.className = 'actions';
+
+        const del = document.createElement('button');
+        del.className = 'small';
+        del.textContent = '削除';
+        del.addEventListener('click', () => {
+          if (confirm('このメモを削除しますか？')) {
+            notes = notes.filter(x => x.id !== n.id);
+            save();
+            render();
+          }
+        });
+
+        const edit = document.createElement('button');
+        edit.className = 'small';
+        edit.textContent = '編集';
+        edit.addEventListener('click', () => {
+          const newText = prompt('メモの内容を編集してください。', n.text);
+          if (newText === null) return;
+          n.text = newText;
+          save();
+          render();
+        });
+
+        actions.appendChild(edit);
+        actions.appendChild(del);
+
+        body.appendChild(title);
+        body.appendChild(text);
+        body.appendChild(meta);
+
+        li.appendChild(body);
+        li.appendChild(actions);
+        listEl.appendChild(li);
+      }
+    }
+
+    function save() {
+      try {
+        localStorage.setItem(KEY, JSON.stringify(notes));
+      } catch (e) {
+        console.error('保存に失敗しました', e);
+      }
+    }
+
+    function load() {
+      try {
+        const raw = localStorage.getItem(KEY);
+        return raw ? JSON.parse(raw) : [];
+      } catch (e) {
+        console.error('読み込みに失敗しました', e);
+        return [];
+      }
+    }
+  </script>
+</body>
 </html>
+
