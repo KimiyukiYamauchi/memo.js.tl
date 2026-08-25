@@ -1,31 +1,44 @@
-//[追加]ボタン押下時に実行する関数
-const onClickAddButton = () => {
-  //テキストボックスの値を取得し、初期化する
-  const text = document.getElementById("add-text").value; //テキストボックスの値を取得
-  if (text === "") return; //テキストボックスが空の場合は何もしない
-  document.getElementById("add-text").value = ""; //テキストボックスを初期化
-  //メモ一覧に追加する要素を作成する
-  const li = document.createElement("li");
-  const div = document.createElement("div");
-  //メモの内容を設定する
-  const p = document.createElement("p");
-  p.innerText = text;
-  //[削除]ボタンを作成し、クリックイベントを設定する
-  const deleteButton = document.createElement("button"); //ボタン要素を作成
-  deleteButton.innerText = "削除"; //ボタンのラベル
-  deleteButton.addEventListener("click", () => {
-    const deleteTarget = deleteButton.closest("li");
-    document.getElementById("memo-list").removeChild(deleteTarget); //メモ一覧から削除
-  });
-  //メモ一覧に追加する
-  div.appendChild(p);
-  div.appendChild(deleteButton);
-  li.appendChild(div);
-  document.getElementById("memo-list").appendChild(li);
-};
+const memos = ["本を読む"]; // 初期タスク
 
-// [追加]ボタンを取得して、クリックイベントを設定
-//HTML内にある要素を取得<button id="add-button">追加</button>
-document
-  .getElementById("add-button")
-  .addEventListener("click", onClickAddButton);
+//[追加]ボタン押下時に実行する関数
+function addMemo() {
+  //テキストボックスの値を取得し、初期化する
+  const input = document.getElementById("add-text"); //テキストボックスの値を取得
+  const memo = input.value.trim(); // 前後の空白を削除
+
+  if (memo !== "") {
+    // 配列の末尾にタスクオブジェクトを追加
+    memos.push(memo);
+    input.value = ""; // 入力欄をクリア
+    updataMemoList(); // リストを更新
+  }
+}
+
+// タスクリストを更新する関数
+function updataMemoList() {
+  const memoList = document.getElementById("memo-list");
+  memoList.innerHTML = ""; // 既存のリストをクリア
+
+  // 配列のforEach メソッドを使ってタスクを表示
+  memos.forEach((memo, index) => {
+    const listItem = document.createElement("li"); // li要素作成
+
+    // リストアイテムの内容を設定
+    listItem.innerHTML = `
+    <span>${memo}</span>
+    <button onclick="removeMemo(${index})">削除</button>
+    `;
+    memoList.appendChild(listItem);
+  });
+}
+
+// タスクを削除する関数
+function removeMemo(index) {
+  // 配列のspliceメソッドを使ってタスクを削除
+  // indexから1つの要素を削除
+  memos.splice(index, 1);
+  updataMemoList(); // リストを更新
+}
+
+// 初期表示
+updataMemoList();
