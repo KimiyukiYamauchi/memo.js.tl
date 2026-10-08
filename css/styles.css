@@ -1,3 +1,4 @@
+
 .container {
   border: solid 1px #ccc;
   padding: 16px;
@@ -11,4 +12,29 @@ li > div {
 
 button {
   margin-left: 16px;
+}
+
+/* メモの追加日時も読みやすく表示 */
+li p {
+  overflow-wrap: anywhere;
+}
+
+/* 空欄だったときの赤いアニメーション */
+.error {
+  animation: errorFlash 0.5s ease-in-out;
+  border: 2px solid red;
+}
+
+@keyframes errorFlash {
+  0% {
+    background-color: white;
+  }
+
+  50% {
+    background-color: #ff9999;
+  }
+
+  100% {
+    background-color: white;
+  }
 }
