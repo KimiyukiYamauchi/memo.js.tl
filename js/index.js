@@ -27,3 +27,8 @@ function deleteMemo(index) {
   memoList.splice(index, 1);
   renderMemoList();
 }
+
+function clearMemos() {
+  memoList = [];
+  renderMemoList();
+}
